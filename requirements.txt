@@ -1,4 +1,4 @@
-python
 streamlit
 pandas
 chinese_calendar
+openpyxl
