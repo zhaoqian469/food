@@ -5,7 +5,6 @@ from datetime import datetime, timedelta
 from io import BytesIO
 from openpyxl import load_workbook
 
-
 # 获取指定年份的法定节假日
 def get_holidays(year):
     holidays = []
@@ -37,24 +36,31 @@ def get_meal_period(time):
 def classify_meal(row, total_amount):
     date = row["交易时间"].date()
     weekday = row["交易时间"].weekday()
+    workday = date in overtime_dates
     meal_period = row["餐费时间段"]
     is_holiday = date in HOLIDAY_AND_HIGH_TEMP_DAYS or weekday >= 5
     subsidy_limit = 0
 
     if row["人员类别"] == "职工":
-        if meal_period == "午餐" and weekday < 5:
+        if meal_period == "午餐" and workday:
             subsidy_limit = 25
         elif meal_period in ["午餐", "晚餐"] and is_holiday:
             subsidy_limit = 29
+        elif meal_period == "午餐" and weekday < 5:
+            subsidy_limit = 25
         elif meal_period == "晚餐":
             subsidy_limit = 29
     elif row["人员类别"] == "研究生":
-        if meal_period == "早餐" and weekday < 5:
-            subsidy_limit = 2
-        elif meal_period == "午餐" and weekday < 5:
+        if meal_period == "早餐" and workday:
+            subsidy_limit = 5
+        elif meal_period == "午餐" and workday:
             subsidy_limit = 25
         elif meal_period in ["午餐", "晚餐"] and is_holiday:
             subsidy_limit = 29
+        elif meal_period == "早餐" and weekday < 5 or workday:
+            subsidy_limit = 2
+        elif meal_period == "午餐" and weekday < 5 or workday:
+            subsidy_limit = 25
         elif meal_period == "晚餐":
             subsidy_limit = 29
 
@@ -82,6 +88,17 @@ if uploaded_file is not None:
     # 获取节假日
     HOLIDAY_AND_HIGH_TEMP_DAYS = get_holidays(holiday_year).union(pd.to_datetime(HIGH_TEMP_DAYS))
 
+    # 用户输入加班调休日期（格式：YYYY-MM-DD,YYYY-MM-DD,...）
+    overtime_dates_input = st.text_input("请输入加班调休日期（格式：YYYY-MM-DD,YYYY-MM-DD,...）", value="2024-03-15,2024-03-16")
+
+    # 解析输入的加班调休日期
+    try:
+        overtime_dates = {datetime.strptime(date.strip(), "%Y-%m-%d").date() for date in overtime_dates_input.split(",")
+                          if date.strip()}
+    except ValueError:
+        st.error("输入格式错误，请确保日期格式为 YYYY-MM-DD，并用逗号分隔！")
+        overtime_dates = set()
+
     # 选择所需字段
     columns_needed = ["人员类别", "姓名", "个人编号", "卡片类型", "交易地点", "交易金额", "交易时间", "卡户部门", "交易类型"]
     df = df[columns_needed]
@@ -102,13 +119,14 @@ if uploaded_file is not None:
     # 计算补贴和超额
     df[["补贴上限", "自付（元）"]] = df.apply(lambda row: pd.Series(classify_meal(row, row["总交易金额"])), axis=1)
 
-    # 计算餐费类别
-    df["工作餐（元）"] = df.apply(lambda x: x["交易金额"] if x["餐费时间段"] == "午餐" and x["补贴上限"] > 0 else 0, axis=1)
-    df["加班餐（元）"] = df.apply(lambda x: x["交易金额"] if x["餐费时间段"] == "晚餐" and x["补贴上限"] > 0 else 0, axis=1)
-    df["早餐（元）"] = df.apply(lambda x: x["交易金额"] if x["餐费时间段"] == "早餐" and x["补贴上限"] > 0 else 0, axis=1)
+    # 计算餐费类别（交易金额 - 自付）
+    df["工作餐（元）"] = df.apply(lambda x: x["交易金额"] - x["自付（元）"] if x["餐费时间段"] == "午餐" and x["补贴上限"] > 0 else 0, axis=1)
+    df["加班餐（元）"] = df.apply(lambda x: (x["交易金额"] - x["自付（元）"]) if x["餐费时间段"] == "晚餐" and x["补贴上限"] > 0 else 0, axis=1)
+    df["早餐（元）"] = df.apply(lambda x: x["交易金额"] - x["自付（元）"] if x["餐费时间段"] == "早餐" and x["补贴上限"] > 0 else 0, axis=1)
+
 
     # 选择最终字段
-    df_final = df[["人员类别","姓名", "个人编号", "卡片类型", "交易地点", "卡户部门", "交易时间", "交易金额",
+    df_final = df[["人员类别", "姓名", "个人编号", "卡片类型", "交易地点", "卡户部门", "交易时间", "交易金额",
                    "早餐（元）", "工作餐（元）", "加班餐（元）", "自付（元）"]]
 
     # 显示结果
