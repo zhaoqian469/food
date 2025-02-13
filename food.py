@@ -54,28 +54,26 @@ def calculate_subsidy(group):
         # 确定餐补上限
         if row["人员类别"] == "职工":
             if meal_period == "早餐":
-                max_subsidy = 5
-            elif meal_period == "午餐" and workday:
-                max_subsidy = 25
+                max_subsidy = 0
             elif meal_period in ["午餐", "晚餐"] and is_holiday:
                 max_subsidy = 29
-            elif meal_period == "午餐" and weekday < 5:
+            elif meal_period == "午餐" and workday:
                 max_subsidy = 25
-            elif meal_period == "晚餐":
+            elif meal_period in ["午餐", "晚餐"]:
                 max_subsidy = 29
+            elif meal_period not in ["早餐", "午餐", "晚餐"]:
+                max_subsidy = 0
         elif row["人员类别"] == "研究生":
             if meal_period == "早餐" and workday:
                 max_subsidy = 2
-            elif meal_period == "午餐" and workday:
-                max_subsidy = 25
             elif meal_period in ["午餐", "晚餐"] and is_holiday:
                 max_subsidy = 29
-            elif meal_period == "早餐" and weekday < 5 or workday:
-                max_subsidy = 2
-            elif meal_period == "午餐" and weekday < 5 or workday:
+            elif meal_period == "午餐" and workday:
                 max_subsidy = 25
-            elif meal_period == "晚餐":
+            elif meal_period in ["午餐", "晚餐"]:
                 max_subsidy = 29
+            elif meal_period not in ["早餐", "午餐", "晚餐"]:
+                max_subsidy = 0
 
         # 计算当前交易可用餐补
         available_subsidy = max(0, max_subsidy - subsidy_used)
