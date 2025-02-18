@@ -92,9 +92,9 @@ def calculate_subsidy(group):
         # 根据就餐时段分类餐补金额
         if meal_period == "早餐":
             df.at[index, "早餐（元）"] = subsidy_given
-        elif meal_period == "午餐":
+        elif meal_period == "午餐" and workday:
             df.at[index, "工作餐（元）"] = subsidy_given
-        elif meal_period == "晚餐":
+        elif meal_period in ["午餐", "晚餐"]:
             df.at[index, "加班餐（元）"] = subsidy_given
 
 # Streamlit 页面
