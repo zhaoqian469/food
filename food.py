@@ -32,16 +32,16 @@ def get_meal_period(time):
 
 # 计算餐补金额
 def calculate_subsidy(group):
-    subsidy_used = 0  # 记录已使用的补贴
-    max_subsidy = 0  # 记录当前时段最大可用补贴
+    subsidy_used = 0.0  # 记录已使用的补贴
+    max_subsidy = 0.0  # 记录当前时段最大可用补贴
 
     for index, row in group.iterrows():
         if row["交易地点"] == "超市":  # 如果交易地点为超市，跳过餐补计算
-            df.at[index, "餐补金额"] = 0
+            df.at[index, "餐补金额"] = 0.0
             df.at[index, "自付（元）"] = row["交易金额"]
-            df.at[index, "早餐（元）"] = 0
-            df.at[index, "工作餐（元）"] = 0
-            df.at[index, "加班餐（元）"] = 0
+            df.at[index, "早餐（元）"] = 0.0
+            df.at[index, "工作餐（元）"] = 0.0
+            df.at[index, "加班餐（元）"] = 0.0
             continue  # 跳过超市的餐补计算
 
         date = row["交易时间"].date()
@@ -54,26 +54,26 @@ def calculate_subsidy(group):
         # 确定餐补上限
         if row["人员类别"] == "职工":
             if meal_period == "早餐":
-                max_subsidy = 0
+                max_subsidy = 0.0
             elif meal_period in ["午餐", "晚餐"] and is_holiday:
-                max_subsidy = 29
+                max_subsidy = 29.0
             elif meal_period == "午餐" and workday:
-                max_subsidy = 25
+                max_subsidy = 25.0
             elif meal_period in ["午餐", "晚餐"]:
-                max_subsidy = 29
+                max_subsidy = 29.0
             elif meal_period not in ["早餐", "午餐", "晚餐"]:
-                max_subsidy = 0
+                max_subsidy = 0.0
         elif row["人员类别"] == "研究生":
             if meal_period == "早餐" and workday:
-                max_subsidy = 2
+                max_subsidy = 2.0
             elif meal_period in ["午餐", "晚餐"] and is_holiday:
-                max_subsidy = 29
+                max_subsidy = 29.0
             elif meal_period == "午餐" and workday:
-                max_subsidy = 25
+                max_subsidy = 25.0
             elif meal_period in ["午餐", "晚餐"]:
-                max_subsidy = 29
+                max_subsidy = 29.0
             elif meal_period not in ["早餐", "午餐", "晚餐"]:
-                max_subsidy = 0
+                max_subsidy = 0.0
 
         # 计算当前交易可用餐补
         available_subsidy = max(0, max_subsidy - subsidy_used)
@@ -92,7 +92,7 @@ def calculate_subsidy(group):
         # 根据就餐时段分类餐补金额
         if meal_period == "早餐":
             df.at[index, "早餐（元）"] = subsidy_given
-        elif meal_period == "午餐" and workday:
+        elif meal_period == "午餐" and not is_holiday and workday:
             df.at[index, "工作餐（元）"] = subsidy_given
         elif meal_period in ["午餐", "晚餐"]:
             df.at[index, "加班餐（元）"] = subsidy_given
@@ -145,9 +145,11 @@ if uploaded_file is not None:
     df["工作餐（元）"] = 0.0
     df["加班餐（元）"] = 0.0
 
-    # 按日期、姓名、个人编号、餐费时间段分组计算餐补
-    df = df.sort_values(by=["姓名", "个人编号", "交易时间"])
-    df.groupby(["姓名", "个人编号", "交易时间", "餐费时间段"]).apply(calculate_subsidy)
+    df["交易日期"] = df["交易时间"].dt.date  # 仅保留日期部分
+    df = df.sort_values(by=["姓名", "个人编号", "交易日期", "交易时间"])  # 按时间排序
+
+    # 添加 include_groups=False 避免警告
+    df.groupby(["姓名", "个人编号", "交易日期", "餐费时间段"], group_keys=False, observed=True).apply(calculate_subsidy)
 
     # 选择最终字段
     df_final = df[["人员类别", "姓名", "个人编号", "卡片类型", "交易地点", "卡户部门", "交易时间", "交易金额",
