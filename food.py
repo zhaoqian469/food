@@ -76,7 +76,7 @@ def calculate_subsidy(group):
                 max_subsidy = 0.0
 
         # 计算当前交易可用餐补
-        available_subsidy = max(0, max_subsidy - subsidy_used)
+        available_subsidy = max(0.0, max_subsidy - subsidy_used)
         if row["交易金额"] > available_subsidy:
             subsidy_given = available_subsidy
         else:
@@ -86,8 +86,8 @@ def calculate_subsidy(group):
         subsidy_used += subsidy_given
 
         # 计算餐补金额和自付金额
-        df.at[index, "餐补金额"] = subsidy_given
-        df.at[index, "自付（元）"] = row["交易金额"] - subsidy_given
+        df.at[index, "餐补金额"] = round(subsidy_given ,2)
+        df.at[index, "自付（元）"] = round(row["交易金额"] - subsidy_given ,2)
 
         # 根据就餐时段分类餐补金额
         if meal_period == "早餐":
