@@ -113,7 +113,7 @@ if uploaded_file is not None:
     holidays = get_holidays(holiday_year)
 
     # 用户输入加班调休日期
-    overtime_dates_input = st.text_input("请输入加班调休日期（格式：YYYY-MM-DD,YYYY-MM-DD,...）", value="2024-03-15,2024-03-16")
+    overtime_dates_input = st.text_input("请输入加班调休日期（格式：YYYY-MM-DD,YYYY-MM-DD,...）", value="2024-10-12")
     overtime_dates = {datetime.strptime(date.strip(), "%Y-%m-%d").date() for date in overtime_dates_input.split(",")}
 
     # 用户输入高温假日期
